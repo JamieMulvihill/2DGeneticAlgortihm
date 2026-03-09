@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
+#include <iostream>
 
 GA::GA(sf::Vector2f startPos, sf::Vector2f padPosition, sf::FloatRect padBounds)
     : startPos(startPos)
@@ -55,7 +56,10 @@ bool GA::allDone() const
 float GA::fitnessScore(const Rocket& rocket) const
 {
     sf::FloatRect bounds = rocket.getBounds();
-    sf::Vector2f rocketPos = sf::Vector2f(bounds.position.x, bounds.position.y);
+    sf::Vector2f rocketPos = sf::Vector2f(
+        bounds.position.x + bounds.size.x / 2.f,
+        bounds.position.y + bounds.size.y / 2.f
+    );
 
     // distance to pad
     float dx = rocketPos.x - padPosition.x;
@@ -134,6 +138,28 @@ void GA::mutate()
 void GA::nextGeneration()
 {
     evaluate();
+
+    float best = *std::max_element(fitnessScores.begin(), fitnessScores.end());
+    float worst = *std::min_element(fitnessScores.begin(), fitnessScores.end());
+    float avg = 0.f;
+    for (float s : fitnessScores) avg += s;
+    avg /= fitnessScores.size();
+
+    std::cout << "Gen " << generation
+        << " | Best: " << best
+        << " | Avg: " << avg
+        << " | Worst: " << worst << "\n";
+
+    int landed = 0;
+    int crashed = 0;
+    for (const auto& rocket : population)
+    {
+        if (rocket.getState() == RocketStatus::Landed) landed++;
+        if (rocket.getState() == RocketStatus::Crashed) crashed++;
+    }
+    std::cout << "Landed: " << landed << " | Crashed: " << crashed << "\n\n";
+
+
     select();
     crossover(selectedWeights);
     mutate();

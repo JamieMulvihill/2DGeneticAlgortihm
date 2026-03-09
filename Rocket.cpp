@@ -4,7 +4,7 @@
 static const float DEG_TO_RAD = 3.14159265f / 180.f;
 
 Rocket::Rocket(sf::Vector2f startPos)
-    : position(startPos), velocity(0.f, 0.f), rotation(-90.f), angularVel(0.f)
+    : startPos(startPos), position(startPos), velocity(0.f, 0.f), rotation(-90.f), angularVel(0.f)
 {
     buildShape();
 }
@@ -84,7 +84,7 @@ void Rocket::checkLanding(sf::FloatRect padBounds)
 
 void Rocket::reset()
 {
-    position = sf::Vector2f(400.f, 50.f);
+    position = startPos;
     velocity = sf::Vector2f(0.f, 0.f);
     rotation = -90.f;
     angularVel = 0.f;

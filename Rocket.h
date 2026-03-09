@@ -21,6 +21,7 @@ public:
     RocketStatus getState() const { return state; }
     void checkLanding(sf::FloatRect padBounds);
     void reset();
+    void buildShape();
 
     FlightState getFlightState(sf::Vector2f padPosition) const;
 
@@ -41,6 +42,7 @@ private:
     RocketStatus state = RocketStatus::Flying;
 
     sf::ConvexShape shape;
-    void buildShape();
+    sf::Vector2f startPos;
+
 };
 
