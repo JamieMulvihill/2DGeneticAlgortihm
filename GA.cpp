@@ -9,9 +9,14 @@ GA::GA(sf::Vector2f startPos, sf::Vector2f padPosition, sf::FloatRect padBounds)
     , padPosition(padPosition)
     , padBounds(padBounds)
 {
+    srand(static_cast<unsigned>(time(nullptr)));
+
     population.reserve(populationSize);
     for (int i = 0; i < populationSize; i++)
-        population.emplace_back(startPos);
+    {
+        float randomX = 100.f + ((float)rand() / RAND_MAX) * 600.f;
+        population.emplace_back(sf::Vector2f(randomX, 50.f));
+    }
 
     fitnessScores.resize(populationSize, 0.f);
 }
@@ -23,6 +28,8 @@ void GA::update(float dt)
     for (auto& rocket : population)
     {
         if (rocket.getState() != RocketStatus::Flying) continue;
+
+        rocket.updateBestDistance(padPosition);
 
         FlightState fs = rocket.getFlightState(padPosition);
         ControlOutput output = rocket.GetBrain().think(fs);
@@ -52,27 +59,43 @@ bool GA::allDone() const
             return false;
     return true;
 }
-
 float GA::fitnessScore(const Rocket& rocket) const
 {
+    float score = 0.f;
+
+    // 1. PROXIMITY - normalise to 0-3000 range (most important)
+    float proximityScore = std::max(0.f, 1.f - (rocket.getBestDistance() / 800.f));
+    score += proximityScore * 3000.f;
+
+    // 2. UPRIGHT - 0-2000 range
+    float tilt = std::fmod(std::abs(rocket.getRotation()), 360.f);
+    if (tilt > 180.f) tilt = 360.f - tilt;
+    float uprightScore = std::max(0.f, 1.f - (tilt / 180.f));
+    score += uprightScore * 2000.f;
+
+    // 3. TIME ALIVE - max ~150 over 15 seconds (minor)
+    score += rocket.getTimeAlive() * 100.f;
+
+    // 4. SLOW NEAR PAD
     sf::FloatRect bounds = rocket.getBounds();
-    sf::Vector2f rocketPos = sf::Vector2f(
+    sf::Vector2f finalPos = sf::Vector2f(
         bounds.position.x + bounds.size.x / 2.f,
         bounds.position.y + bounds.size.y / 2.f
     );
+    float dx = finalPos.x - padPosition.x;
+    float dy = finalPos.y - padPosition.y;
+    float finalDist = std::sqrt(dx * dx + dy * dy);
+    sf::Vector2f vel = rocket.getVelocity();
+    float speed = std::sqrt(vel.x * vel.x + vel.y * vel.y);
+    if (finalDist < 150.f)
+    {
+        float slowScore = std::max(0.f, 1.f - (speed / 200.f));
+        score += slowScore * 1000.f;
+    }
 
-    // distance to pad
-    float dx = rocketPos.x - padPosition.x;
-    float dy = rocketPos.y - padPosition.y;
-    float distance = std::sqrt(dx * dx + dy * dy);
-
-    float score = 1000.f - distance; // closer = better
-
-    if (rocket.getState() == RocketStatus::Landed)
-        score += 5000.f; // big bonus for landing
-
-    if (rocket.getState() == RocketStatus::Crashed)
-        score -= 500.f; // penalty for crashing hard
+    // 5. OUTCOMES
+    if (rocket.getState() == RocketStatus::Crashed) score -= 2500.f;
+    if (rocket.getState() == RocketStatus::Landed)  score += 5000.f;
 
     return std::max(0.f, score);
 }
@@ -99,6 +122,8 @@ void GA::select()
     selectedWeights.clear();
     for (int i = 0; i < topCount; i++)
         selectedWeights.push_back(population[indices[i]].GetBrain().weights);
+
+    population.back().GetBrain().randomise();
 }
 
 void GA::crossover(const std::vector<std::vector<float>>& parents)
@@ -160,13 +185,42 @@ void GA::nextGeneration()
     std::cout << "Landed: " << landed << " | Crashed: " << crashed << "\n\n";
 
 
+    int bestIdx = std::max_element(fitnessScores.begin(), fitnessScores.end())
+        - fitnessScores.begin();
+
+    FlightState testState;
+    testState.relativeX = 0.f;   // directly above pad
+    testState.relativeY = -0.5f;  // halfway up screen
+    testState.velocityX = 0.f;
+    testState.velocityY = 0.3f;  // falling
+    testState.rotation = 0.f;   // upright
+    testState.angularVel = 0.f;
+
+    ControlOutput bestOutput = population[bestIdx].GetBrain().think(testState);
+    std::cout << "Best brain decisions: "
+        << "Thrust=" << bestOutput.thrustUp << " "
+        << "Left=" << bestOutput.rotateLeft << " "
+        << "Right=" << bestOutput.rotateRight << "\n";
+
+    auto& w = population[bestIdx].GetBrain().weights;
+    float wMin = *std::min_element(w.begin(), w.end());
+    float wMax = *std::max_element(w.begin(), w.end());
+    std::cout << "Weight range: " << wMin << " to " << wMax << "\n\n";
+
     select();
     crossover(selectedWeights);
     mutate();
 
+    for (int i = 0; i < 2; i++)
+        population[i].GetBrain().weights = selectedWeights[i];
+
     // reset all rockets
     for (auto& rocket : population)
+    {
+        float randomX = 100.f + ((float)rand() / RAND_MAX) * 600.f;
+        rocket.setStartPos(sf::Vector2f(randomX, 50.f));
         rocket.reset();
+    }
 
     generationTimer = 0.f;
     generation++;

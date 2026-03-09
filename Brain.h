@@ -9,13 +9,14 @@ public:
     ControlOutput think(const FlightState& state) const;
     void randomise();
 
-    std::vector<float> weights; // public so GA can access and evolve them
+    std::vector<float> weights;
 
     static const int inputCount = 6;
+    static const int hiddenCount = 8;
     static const int outputCount = 3;
-    static const int weightCount = inputCount * outputCount; // 18 weights
-
+    // 6*8 + 8*3 = 48 + 24 = 72 weights
+    static const int weightCount = (inputCount * hiddenCount) + (hiddenCount * outputCount);
 
 private:
-    float activate(float value) const; // sigmoid
+    float activate(float value) const;
 };

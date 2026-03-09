@@ -36,7 +36,7 @@ private:
 
     static const int populationSize = 50;
     const float maxGenerationTime = 10.f; // seconds before force next gen
-    const float mutationRate = 0.1f;
-    const float mutationStrength = 0.5f;
+    const float mutationRate = 0.05f;
+    const float mutationStrength = 0.1f;
 };
 

@@ -22,4 +22,8 @@ private:
     LandingPad landingPad;
     GA ga;
     sf::Font font;
+
+    bool manualMode = false;
+    Rocket testRocket;
+    Input input;
 };

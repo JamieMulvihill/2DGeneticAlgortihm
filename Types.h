@@ -17,4 +17,4 @@ struct ControlOutput
     bool rotateRight = false;
 };
 
-enum class RocketStatus { Flying, Landed, Crashed };
+enum class RocketStatus { Flying, Landed, Crashed, OffScreen};

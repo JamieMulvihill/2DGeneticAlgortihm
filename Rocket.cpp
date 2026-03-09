@@ -4,7 +4,7 @@
 static const float DEG_TO_RAD = 3.14159265f / 180.f;
 
 Rocket::Rocket(sf::Vector2f startPos)
-    : startPos(startPos), position(startPos), velocity(0.f, 0.f), rotation(-90.f), angularVel(0.f)
+    : startPos(startPos), position(startPos), velocity(0.f, 0.f), rotation(((float)rand() / RAND_MAX) * 360.f - 180.f), angularVel(0.f)
 {
     buildShape();
 }
@@ -24,18 +24,21 @@ void Rocket::update(float dt)
 {
     if (state != RocketStatus::Flying) return;
 
-    // Apply gravity
+    timeAlive += dt;
+
     velocity.y += gravity * dt;
-
-    // Update position
     position += velocity * dt;
-
-    // Update rotation
     rotation += angularVel * dt;
-    angularVel *= 0.95f; // dampen spin over time
+    angularVel *= 0.95f;
 
     shape.setPosition(position);
     shape.setRotation(sf::degrees(rotation));
+
+    if (position.x < 0 || position.x > 800.f ||
+        position.y < 0 || position.y > 600.f)
+    {
+        state = RocketStatus::Crashed;
+    }
 }
 
 void Rocket::draw(sf::RenderWindow& window)
@@ -67,7 +70,7 @@ void Rocket::checkLanding(sf::FloatRect padBounds)
     float speed = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
     float tilt = std::fmod(std::abs(rotation), 360.f);
 
-    if (speed < 70.f && tilt < 25.f)
+    if (speed < 300.f && tilt < 45.f)
     {
         state = RocketStatus::Landed;
         velocity = sf::Vector2f(0.f, 0.f);
@@ -84,13 +87,15 @@ void Rocket::checkLanding(sf::FloatRect padBounds)
 
 void Rocket::reset()
 {
+    timeAlive = 0.f;
     position = startPos;
     velocity = sf::Vector2f(0.f, 0.f);
-    rotation = -90.f;
+    rotation = ((float)rand() / RAND_MAX) * 360.f - 180.f;
     angularVel = 0.f;
     state = RocketStatus::Flying;
     shape.setFillColor(sf::Color::White);
     shape.setPosition(position);
+    bestDistance = 99999.f;
 }
 
 
@@ -104,4 +109,13 @@ FlightState Rocket::getFlightState(sf::Vector2f padPosition) const
     fs.rotation = rotation / 180.f;                      // normalise to -1..1 range
     fs.angularVel = angularVel / 200.f;
     return fs;
+}
+
+void Rocket::updateBestDistance(sf::Vector2f padPosition)
+{
+    float dx = position.x - padPosition.x;
+    float dy = position.y - padPosition.y;
+    float dist = std::sqrt(dx * dx + dy * dy);
+    if (dist < bestDistance)
+        bestDistance = dist;
 }

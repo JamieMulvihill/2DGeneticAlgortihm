@@ -2,8 +2,9 @@
 
 Game::Game()
     : window(sf::VideoMode(sf::Vector2u(800, 600)), sf::String("SFML Window"))
-    , landingPad(sf::Vector2f(400.f, 550.f), sf::Vector2f(120.f, 15.f))
+    , landingPad(sf::Vector2f(400.f, 550.f), sf::Vector2f(240.0f, 15.f))
     , ga(sf::Vector2f(400.f, 50.f), sf::Vector2f(400.f, 550.f), landingPad.getBounds())
+    , testRocket(sf::Vector2f(400.f, 50.f))
 {
     if (!font.openFromFile("arial/arial.ttf"))
     {
@@ -29,19 +30,47 @@ void Game::handleEvents()
     {
         if (event->is<sf::Event::Closed>())
             window.close();
+
+        if (const auto* key = event->getIf<sf::Event::KeyPressed>())
+        {
+            // Tab toggles manual mode
+            if (key->code == sf::Keyboard::Key::Tab)
+            {
+                manualMode = !manualMode;
+                testRocket.reset();
+            }
+            if (key->code == sf::Keyboard::Key::R)
+                testRocket.reset();
+        }
     }
 }
 
 void Game::update(float dt)
 {
-    ga.update(dt);
+    if (manualMode)
+    {
+        input.update();
+        if (input.thrustUp)    testRocket.thrustUp();
+        if (input.rotateLeft)  testRocket.rotateLeft();
+        if (input.rotateRight) testRocket.rotateRight();
+        testRocket.update(dt);
+        testRocket.checkLanding(landingPad.getBounds());
+    }
+    else
+    {
+        ga.update(dt);
+    }
 }
 
 void Game::render()
 {
     window.clear();
-    ga.render(window);
+    if (manualMode)
+        testRocket.draw(window);
+    else
+        ga.render(window);
     landingPad.draw(window);
+
     renderHUD();
     window.display();
 }
