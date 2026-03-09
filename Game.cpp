@@ -2,9 +2,14 @@
 
 Game::Game()
     : window(sf::VideoMode(sf::Vector2u(800, 600)), sf::String("SFML Window"))
-    , rocket(sf::Vector2f(400.f, 50.f))
     , landingPad(sf::Vector2f(400.f, 550.f), sf::Vector2f(120.f, 15.f))
+    , ga(sf::Vector2f(400.f, 50.f), sf::Vector2f(400.f, 550.f), landingPad.getBounds())
 {
+    if (!font.openFromFile("arial/arial.ttf"))
+    {
+        // handle error - make sure arial.ttf is in your project directory
+    }
+
 }
 
 void Game::run()
@@ -24,52 +29,36 @@ void Game::handleEvents()
     {
         if (event->is<sf::Event::Closed>())
             window.close();
-
-        if (const auto* keyPress = event->getIf<sf::Event::KeyPressed>())
-        {
-            if (keyPress->code == sf::Keyboard::Key::Tab)
-            {
-                aiControlled = !aiControlled;
-                //rocket.reset();
-            }
-            if (keyPress->code == sf::Keyboard::Key::R)
-                rocket.reset();
-        }
     }
 }
 
 void Game::update(float dt)
 {
-    if (rocket.getState() != RocketStatus::Flying) return;
-
-    if (aiControlled)
-    {
-        
-        sf::Vector2f padPos = sf::Vector2f(400.f, 550.f);
-        FlightState fs = rocket.getFlightState(padPos);
-        ControlOutput output = rocket.GetBrain().think(fs);
-
-        if (output.thrustUp)    rocket.thrustUp();
-        if (output.rotateLeft)  rocket.rotateLeft();
-        if (output.rotateRight) rocket.rotateRight();
-    }
-    else
-    {
-        
-        input.update();
-        if (input.thrustUp)    rocket.thrustUp();
-        if (input.rotateLeft)  rocket.rotateLeft();
-        if (input.rotateRight) rocket.rotateRight();
-    }
-
-    rocket.update(dt);
-    rocket.checkLanding(landingPad.getBounds());
+    ga.update(dt);
 }
 
 void Game::render()
 {
     window.clear();
-    rocket.draw(window);
+    ga.render(window);
     landingPad.draw(window);
+    renderHUD();
     window.display();
+}
+
+void Game::renderHUD()
+{
+    sf::Text genText(font);
+    genText.setString("Generation: " + std::to_string(ga.getGeneration()));
+    genText.setCharacterSize(20);
+    genText.setFillColor(sf::Color::White);
+    genText.setPosition(sf::Vector2f(10.f, 10.f));
+    window.draw(genText);
+
+    sf::Text modeText(font);
+    modeText.setString("Rockets: 50 | Time: " + std::to_string((int)ga.getTimer()) + "s");
+    modeText.setCharacterSize(20);
+    modeText.setFillColor(sf::Color::Yellow);
+    modeText.setPosition(sf::Vector2f(10.f, 35.f));
+    window.draw(modeText);
 }

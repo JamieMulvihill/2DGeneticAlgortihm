@@ -6,13 +6,14 @@
 
 class GA
 {
+public:
     GA(sf::Vector2f startPos, sf::Vector2f padPosition, sf::FloatRect padBounds);
 
     void update(float dt);
     void render(sf::RenderWindow& window);
 
     int getGeneration() const { return generation; }
-
+    float getTimer() const { return generationTimer; }
 private:
     void evaluate();
     void select();

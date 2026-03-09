@@ -1,15 +1,16 @@
 #pragma once
 #include <SFML/Graphics.hpp>
-#include "Rocket.h"
-#include "Input.h"
+#include "GA.h"
 #include "LandingPad.h"
-
+#include "Input.h"
 
 class Game
 {
 public:
     Game();
     void run();
+
+    void renderHUD();
 
 private:
     void handleEvents();
@@ -18,11 +19,7 @@ private:
 
     sf::RenderWindow window;
     sf::Clock clock;
-
-    Input input;
-
-    Rocket rocket;
     LandingPad landingPad;
-
-    bool aiControlled = false;
+    GA ga;
+    sf::Font font;
 };
